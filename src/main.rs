@@ -1,5 +1,6 @@
 use yew::prelude::*;
 use rand::{thread_rng, Rng};
+use std::fmt::Write;
 
 struct Vector2D {
    x: f64,
@@ -53,10 +54,9 @@ fn Adder() -> Html {
 fn Randomizer() -> Html {
     let particle = Particle::randomize_state();
     html! {
-	<div>
-	    <p> { particle.position.x } </p>
-	    <p> { particle.position.y } </p>
-	</div>
+	<svg width="760" height="1080" viewBox="-540 -760 760 1080" fill="none">
+	    <circle cx="particle.position.x" cy="particle.position.y" r="50" fill="#aede" stroke="black"/>
+	</svg>    
     }
 }
 
