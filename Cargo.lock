@@ -1252,6 +1252,7 @@ name = "yew-app"
 version = "0.1.0"
 dependencies = [
  "rand",
+ "wasm-bindgen",
  "yew",
 ]
 

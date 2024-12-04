@@ -53,11 +53,13 @@ fn Adder() -> Html {
 #[function_component]
 fn Randomizer() -> Html {
     let particle = Particle::randomize_state();
+    let x = format!("{}", particle.position.x * 100.0);
+    let y = format!("{}", particle.position.y * 100.0);
     html! {
-	<svg width="760" height="1080" viewBox="-540 -760 760 1080" fill="none">
-	    <circle cx="particle.position.x" cy="particle.position.y" r="50" fill="#aede" stroke="black"/>
-	</svg>    
-    }
+	<svg width="100vw" height="100vw">
+	    <circle cx={x} cy={y} r="10" fill="#aede" stroke="black"/> 
+	</svg>
+    }  
 }
 
 fn main() {
