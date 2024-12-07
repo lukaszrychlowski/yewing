@@ -7,3 +7,4 @@ edition = "2021"
 yew = { git = "https://github.com/yewstack/yew/", features = ["csr"] }
 rand = "*"
 wasm-bindgen = "*"
+wgpu = "23.0.1"

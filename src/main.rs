@@ -1,6 +1,6 @@
 use yew::prelude::*;
 use rand::{thread_rng, Rng};
-use std::fmt::Write;
+use std::iter;
 
 struct Vector2D {
    x: f64,
@@ -8,7 +8,7 @@ struct Vector2D {
 }
 
 impl Vector2D {
-    pub fn new(x: f64, y: f64) -> Self {
+    fn new(x: f64, y: f64) -> Self {
 	Self { x, y }
     }
 }
@@ -21,7 +21,7 @@ struct Particle {
 }
 
 impl Particle {
-    pub fn randomize_state() -> Self {
+    fn new() -> Self {
 	let mut rng = rand::thread_rng();
 	Self {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
@@ -30,38 +30,35 @@ impl Particle {
 	    hue: rng.gen::<f64>()
 	}
     }
-}
-
-#[function_component]
-fn Adder() -> Html {
-    let counter = use_state(|| 0);
-    let onclick = {
-	let counter = counter.clone();
-	move |_| {
-	    counter.set(*counter + 2);
+    fn generate_particles() -> Vec<Particle> {
+	let mut vec = Vec::new();
+	let no_of_particles = 100;
+	for i in 0..no_of_particles {
+	    vec.push(Particle::new());
 	}
-    };
-    
-    html! {
-	<div>
-	    <button {onclick}>{ "+2" }</button>
-	    <p>{ *counter }</p>
-	</div>
+	vec
+    }
+	
+    fn draw(&self) -> Html {
+	let x = format!("{}", self.position.x * 1080.0); // * innerWidth()
+	let y = format!("{}", self.position.y * 1600.0); // * innerHeight()
+	let radius = format!("{}", self.radius * 20.0);
+	html! {
+	    <circle cx={x} cy={y} r={radius} fill="#aede" stroke="black"/>
+	}
     }
 }
 
 #[function_component]
-fn Randomizer() -> Html {
-    let particle = Particle::randomize_state();
-    let x = format!("{}", particle.position.x * 100.0);
-    let y = format!("{}", particle.position.y * 100.0);
+fn App() -> Html {
+    let particles = Particle::generate_particles();
     html! {
-	<svg width="100vw" height="100vw">
-	    <circle cx={x} cy={y} r="10" fill="#aede" stroke="black"/> 
-	</svg>
+	<svg width="100vw" height="100vh">
+	   { for particles.iter().map(|particle| particle.draw()) }
+        </svg>
     }  
 }
 
 fn main() {
-    yew::Renderer::<Randomizer>::new().render();
+    yew::Renderer::<App>::new().render();
 }
