@@ -29,52 +29,64 @@ impl Particle {
 	let mut rng = rand::thread_rng();
 	Self {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
-	    acceleration: Vector2D::new(0.0, 1.0 / 9.81 / 62.5),
-	    velocity: Vector2D::new(0.001 * rng.gen::<f64>(), 0.001 * rng.gen::<f64>()),
+	    acceleration: Vector2D::new(0.0, 0.0),
+	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
 	    radius: rng.gen::<f64>(),
 	    hue: rng.gen::<f64>()
 	}
     }
+    
     fn generate_particles(no_of_particles: i32) -> Vec<Particle> {
 	(0..no_of_particles).map(|_| Particle::new()).collect()
     }
 	
     fn draw(&self) -> Html {
-	let x = format!("{}", self.position.x * 1080.0); // * innerWidth()
-	let y = format!("{}", self.position.y * 1565.0); // * innerHeight()
-	let radius = format!("{}", self.radius * 10.0);
+	let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
+	let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
+	let radius = format!("{}", self.radius);
 	html! {
 	    <circle cx={x} cy={y} r={radius} fill="#aede" stroke="black"/>
 	}
     }
 
-    fn update(&mut self) {
-	self.velocity.x += self.acceleration.x;
-	self.velocity.y += self.acceleration.y;
+    fn update_state(&mut self) {
+	const GRAVITY: f64 = 9.8;
+	const FRICTION_COEFF: f64 = 0.05;
+	const RESTITUTION: f64 = 0.65;
+	const TIME_STEP: f64 = 0.016;
 	
-	self.position.x +=  self.velocity.x;
-	self.position.y +=  self.velocity.y;
+	self.position.x +=  self.velocity.x * TIME_STEP;
+	self.position.y +=  self.velocity.y * TIME_STEP;
 
-	if self.position.x < 0.0 || self.position.x > 1.0 {
-	    self.velocity.x = -self.velocity.x;
+	self.velocity.x += self.acceleration.x * TIME_STEP;
+	self.velocity.y += self.acceleration.y + GRAVITY * TIME_STEP;
+
+	self.velocity.x *= 1.0 - FRICTION_COEFF * self.velocity.x;
+	self.velocity.y *= 1.0 - FRICTION_COEFF * self.velocity.y;
+	
+	if self.position.x <= 0.0 || self.position.x >= 1.0 {
+	    self.velocity.x = -RESTITUTION * self.velocity.x;
+	    self.velocity.y = -0.5 * RESTITUTION * self.velocity.y;
 	}
-	if self.position.y < 0.0 || self.position.y > 1.0 {
-	    self.velocity.y = -self.velocity.y;
+	if self.position.y >= 1.0 {
+	    self.velocity.y = -RESTITUTION * self.velocity.y;
+	    self.velocity.x = -0.5 * RESTITUTION * self.velocity.x;
 	}
+
     }
 }
 
 #[function_component]
 fn App() -> Html {
-    let particles = use_state(|| Particle::generate_particles(1000)); //state of particles is of interest
+    let particles = use_state(|| Particle::generate_particles(5000)); //state of particles is of interest
     {
 	let particles = particles.clone();
 	use_effect(|| {
-	    let interval = Interval::new(16, move || { //1sec interval
+	    let interval = Interval::new(36, move || {
 		particles.set({
 		    let mut updated_particles = (*particles).clone();
 		    for particle in &mut updated_particles {
-			particle.update();
+			particle.update_state();
 		    }
 		    updated_particles
 		});
@@ -84,7 +96,15 @@ fn App() -> Html {
     }
     
     html! {
-	<svg width="100vw" height="100vh" viewbox="0 0 100 100" >
+	<svg width="1000" height="1000" viewbox="0 0 100 100" >
+	    <rect width="1000" height="1000" fill="none" stroke="black" stroke-width="10"/>
+	    <text x="20" y=" 30" class="small"> { particles[0].position.x } </text>
+	    <text x="20" y=" 45" class="small"> { particles[0].position.y } </text>
+	    <text x="20" y=" 60" class="small"> { particles[0].velocity.x } </text>
+	    <text x="20" y=" 75" class="small"> { particles[0].velocity.y } </text>
+	    <text x="20" y=" 90" class="small"> { particles[0].acceleration.x } </text>
+	    <text x="20" y="105" class="small"> { particles[0].acceleration.y } </text>
+	    
 	   { for particles.iter().map(|particle| particle.draw()) }
         </svg>
     }  
