@@ -29,8 +29,10 @@ impl Particle {
 	let mut rng = rand::thread_rng();
 	Self {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
+	    //position: Vector2D::new(0.50, 0.0),
 	    acceleration: Vector2D::new(0.0, 0.0),
-	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
+	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
+	    //velocity: Vector2D::new(0.0, 0.0),
 	    radius: rng.gen::<f64>(),
 	    hue: rng.gen::<f64>()
 	}
@@ -43,7 +45,7 @@ impl Particle {
     fn draw(&self) -> Html {
 	let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
 	let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
-	let radius = format!("{}", self.radius);
+	let radius = format!("{}", self.radius*20.0);
 	html! {
 	    <circle cx={x} cy={y} r={radius} fill="#aede" stroke="black"/>
 	}
@@ -52,7 +54,7 @@ impl Particle {
     fn update_state(&mut self) {
 	const GRAVITY: f64 = 9.8;
 	const FRICTION_COEFF: f64 = 0.05;
-	const RESTITUTION: f64 = 0.65;
+	const RESTITUTION: f64 = 0.3;
 	const TIME_STEP: f64 = 0.016;
 	
 	self.position.x +=  self.velocity.x * TIME_STEP;
@@ -61,28 +63,31 @@ impl Particle {
 	self.velocity.x += self.acceleration.x * TIME_STEP;
 	self.velocity.y += self.acceleration.y + GRAVITY * TIME_STEP;
 
-	self.velocity.x *= 1.0 - FRICTION_COEFF * self.velocity.x;
-	self.velocity.y *= 1.0 - FRICTION_COEFF * self.velocity.y;
+	self.velocity.x *= 1.0 - FRICTION_COEFF;
+	self.velocity.y *= 1.0 - FRICTION_COEFF;
 	
 	if self.position.x <= 0.0 || self.position.x >= 1.0 {
 	    self.velocity.x = -RESTITUTION * self.velocity.x;
-	    self.velocity.y = -0.5 * RESTITUTION * self.velocity.y;
 	}
 	if self.position.y >= 1.0 {
-	    self.velocity.y = -RESTITUTION * self.velocity.y;
-	    self.velocity.x = -0.5 * RESTITUTION * self.velocity.x;
+	    self.velocity.y = -RESTITUTION * self.velocity.y
 	}
-
+	if self.velocity.y.abs() < 0.05 {
+	    self.velocity.y = 0.0;
+	}
+	if self.velocity.x.abs() < 0.01 {
+	    self.velocity.x = 0.0;
+	}
     }
 }
 
 #[function_component]
 fn App() -> Html {
-    let particles = use_state(|| Particle::generate_particles(5000)); //state of particles is of interest
+    let particles = use_state(|| Particle::generate_particles(10000)); //state of particles is of interest
     {
 	let particles = particles.clone();
 	use_effect(|| {
-	    let interval = Interval::new(36, move || {
+	    let interval = Interval::new(16, move || {
 		particles.set({
 		    let mut updated_particles = (*particles).clone();
 		    for particle in &mut updated_particles {
