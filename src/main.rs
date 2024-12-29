@@ -29,10 +29,8 @@ impl Particle {
 	let mut rng = rand::thread_rng();
 	Self {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
-	    //position: Vector2D::new(0.50, 0.0),
 	    acceleration: Vector2D::new(0.0, 0.0),
 	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
-	    //velocity: Vector2D::new(0.0, 0.0),
 	    radius: rng.gen::<f64>(),
 	    hue: rng.gen::<f64>()
 	}
@@ -45,16 +43,16 @@ impl Particle {
     fn draw(&self) -> Html {
 	let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
 	let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
-	let radius = format!("{}", self.radius*20.0);
+	let radius = format!("{}", self.radius * 25.0);
 	html! {
 	    <circle cx={x} cy={y} r={radius} fill="#aede" stroke="black"/>
 	}
     }
-
+	
     fn update_state(&mut self) {
 	const GRAVITY: f64 = 9.8;
-	const FRICTION_COEFF: f64 = 0.05;
-	const RESTITUTION: f64 = 0.3;
+	const FRICTION_COEFF: f64 = 0.025;
+	const RESTITUTION: f64 = 0.45;
 	const TIME_STEP: f64 = 0.016;
 	
 	self.position.x +=  self.velocity.x * TIME_STEP;
@@ -72,7 +70,7 @@ impl Particle {
 	if self.position.y >= 1.0 {
 	    self.velocity.y = -RESTITUTION * self.velocity.y
 	}
-	if self.velocity.y.abs() < 0.05 {
+	if self.velocity.y.abs() < 0.1 {
 	    self.velocity.y = 0.0;
 	}
 	if self.velocity.x.abs() < 0.01 {
@@ -80,10 +78,18 @@ impl Particle {
 	}
     }
 }
+	    
 
 #[function_component]
 fn App() -> Html {
-    let particles = use_state(|| Particle::generate_particles(10000)); //state of particles is of interest
+    let particles = use_state(|| Particle::generate_particles(1000)); //state of particles is of interest
+    let onclick = {
+	let particles = particles.clone();
+	Callback::from(move |_| {
+	    particles.set(Particle::generate_particles(1000));
+	 })
+    };
+    
     {
 	let particles = particles.clone();
 	use_effect(|| {
@@ -99,8 +105,12 @@ fn App() -> Html {
 	    move || drop(interval)
 	});
     }
-    
+  
     html! {
+	<>
+	    <div>
+	    <button {onclick}>{ "reset" }</button>
+	    </div>
 	<svg width="1000" height="1000" viewbox="0 0 100 100" >
 	    <rect width="1000" height="1000" fill="none" stroke="black" stroke-width="10"/>
 	    <text x="20" y=" 30" class="small"> { particles[0].position.x } </text>
@@ -112,6 +122,7 @@ fn App() -> Html {
 	    
 	   { for particles.iter().map(|particle| particle.draw()) }
         </svg>
+	    </>
     }  
 }
 
