@@ -20,7 +20,8 @@ struct Particle {
    velocity: Vector2D, //[m/s]
    acceleration: Vector2D, //[m/s2]
    radius: f64, // [m]
-   hue: f64 
+   hue: String,
+   collision: bool
 }
 
 
@@ -32,7 +33,8 @@ impl Particle {
 	    acceleration: Vector2D::new(0.0, 0.0),
 	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
 	    radius: rng.gen::<f64>(),
-	    hue: rng.gen::<f64>()
+	    hue: "#aede".to_string(),
+	    collision: false
 	}
     }
     
@@ -40,12 +42,12 @@ impl Particle {
 	(0..no_of_particles).map(|_| Particle::new()).collect()
     }
 	
-    fn draw(&self) -> Html {
+    fn draw(&self, color: String) -> Html {
 	let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
 	let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
 	let radius = format!("{}", self.radius * 25.0);
 	html! {
-	    <circle cx={x} cy={y} r={radius} fill="#aede" stroke="black"/>
+	    <circle cx={x} cy={y} r={radius} fill={color} stroke="black"/>
 	}
     }
 	
@@ -76,17 +78,28 @@ impl Particle {
 	if self.velocity.x.abs() < 0.01 {
 	    self.velocity.x = 0.0;
 	}
+
+	self.hue = if self.collision == true { "#babe".to_string() } else { "#aede".to_string() };
+	
+	
+    }
+
+    fn check_collision(&mut self, particles: &[Particle]) {
+	for particle in particles {
+	    self.collision = if self.position.x == particle.position.x && self.position.y == particle.position.y { true } else { false }
+	}
     }
 }
 	    
 
 #[function_component]
 fn App() -> Html {
-    let particles = use_state(|| Particle::generate_particles(1000)); //state of particles is of interest
+    const NO_OF_PARTICLES: i32 = 100;
+    let particles = use_state(|| Particle::generate_particles(NO_OF_PARTICLES)); //state of particles is of interest
     let onclick = {
 	let particles = particles.clone();
 	Callback::from(move |_| {
-	    particles.set(Particle::generate_particles(1000));
+	    particles.set(Particle::generate_particles(NO_OF_PARTICLES));
 	 })
     };
     
@@ -96,7 +109,10 @@ fn App() -> Html {
 	    let interval = Interval::new(16, move || {
 		particles.set({
 		    let mut updated_particles = (*particles).clone();
+		    let particles_snap = updated_particles.clone();
 		    for particle in &mut updated_particles {
+			//particle.update_state();
+			particle.check_collision(&particles_snap);
 			particle.update_state();
 		    }
 		    updated_particles
@@ -120,7 +136,7 @@ fn App() -> Html {
 	    <text x="20" y=" 90" class="small"> { particles[0].acceleration.x } </text>
 	    <text x="20" y="105" class="small"> { particles[0].acceleration.y } </text>
 	    
-	   { for particles.iter().map(|particle| particle.draw()) }
+	   { for particles.iter().map(|particle| particle.draw(particle.hue.clone())) }
         </svg>
 	    </>
     }  
