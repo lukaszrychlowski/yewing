@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 yew = { git = "https://github.com/yewstack/yew/", features = ["csr"] }
 rand = "*"
+log = "0.4"
+console_log = "0.2"
 wasm-bindgen = "*"
 wgpu = "23.0.1"
 gloo = "0.11"
