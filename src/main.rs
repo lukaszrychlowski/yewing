@@ -1,9 +1,8 @@
 use yew::prelude::*;
-use rand::{thread_rng, Rng};
-use std::iter;
+use rand::{Rng};
 use gloo::timers::callback::Interval;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Vector2D {
    x: f64,
    y: f64
@@ -14,7 +13,7 @@ impl Vector2D {
 	Self { x, y }
     }
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Particle {
    position: Vector2D, // [m]
    velocity: Vector2D, //[m/s]
@@ -32,7 +31,8 @@ impl Particle {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
 	    acceleration: Vector2D::new(0.0, 0.0),
 	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
-	    radius: rng.gen::<f64>(),
+	    //radius: rng.gen::<f64>(),
+	    radius: 1.0,
 	    hue: "#aede".to_string(),
 	    collision: false
 	}
@@ -51,7 +51,7 @@ impl Particle {
 	}
     }
 	
-    fn update_state(&mut self) {
+    fn update_state(&mut self, collision: bool) {
 	const GRAVITY: f64 = 9.8;
 	const FRICTION_COEFF: f64 = 0.025;
 	const RESTITUTION: f64 = 0.45;
@@ -79,22 +79,34 @@ impl Particle {
 	    self.velocity.x = 0.0;
 	}
 
-	self.hue = if self.collision == true { "#babe".to_string() } else { "#aede".to_string() };
-	
-	
+	self.hue = if collision == true { "#babe".to_string() } else { "#aede".to_string() };
     }
 
-    fn check_collision(&mut self, particles: &[Particle]) {
-	for particle in particles {
-	    self.collision = if self.position.x == particle.position.x && self.position.y == particle.position.y { true } else { false }
+    fn check_collision(&mut self, particles: &[Particle]) -> bool {
+	let mut collision = false;
+	for particle in particles.iter() {
+	    if self == particle {
+		log::debug!("self");
+		continue;
+	   }
+	   let dx = 1000.0 * (self.position.x - particle.position.x);
+	   let dy = 1000.0 * (self.position.y - particle.position.y);
+	   let dist = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
+	   if dist <= 25.0 * ( self.radius + particle.radius)
+	   {
+	       collision = true;
+	       break;
+	   }
 	}
+	return collision;
     }
 }
 	    
 
 #[function_component]
 fn App() -> Html {
-    const NO_OF_PARTICLES: i32 = 100;
+    const NO_OF_PARTICLES: i32 = 30;
+    const INTERVAL: u32 = 200;
     let particles = use_state(|| Particle::generate_particles(NO_OF_PARTICLES)); //state of particles is of interest
     let onclick = {
 	let particles = particles.clone();
@@ -106,14 +118,14 @@ fn App() -> Html {
     {
 	let particles = particles.clone();
 	use_effect(|| {
-	    let interval = Interval::new(16, move || {
+	    let interval = Interval::new(INTERVAL, move || {
 		particles.set({
 		    let mut updated_particles = (*particles).clone();
-		    let particles_snap = updated_particles.clone();
+		    let particles_snap = (*particles).clone();
 		    for particle in &mut updated_particles {
 			//particle.update_state();
-			particle.check_collision(&particles_snap);
-			particle.update_state();
+			let collision = particle.check_collision(&particles_snap);
+			particle.update_state(collision);
 		    }
 		    updated_particles
 		});
@@ -135,7 +147,7 @@ fn App() -> Html {
 	    <text x="20" y=" 75" class="small"> { particles[0].velocity.y } </text>
 	    <text x="20" y=" 90" class="small"> { particles[0].acceleration.x } </text>
 	    <text x="20" y="105" class="small"> { particles[0].acceleration.y } </text>
-	    
+	    <text x="20" y="120" class="small"> { particles[0].radius } </text>
 	   { for particles.iter().map(|particle| particle.draw(particle.hue.clone())) }
         </svg>
 	    </>
@@ -143,5 +155,6 @@ fn App() -> Html {
 }
 
 fn main() {
+    console_log::init_with_level(log::Level::Debug).expect("Failed to initialize logger");
     yew::Renderer::<App>::new().render();
 }
