@@ -20,9 +20,9 @@ struct Particle {
    acceleration: Vector2D, //[m/s2]
    radius: f64, // [m]
    hue: String,
+   mass: f64,
    collision: bool
 }
-
 
 impl Particle {
     fn new() -> Self {
@@ -31,10 +31,11 @@ impl Particle {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
 	    acceleration: Vector2D::new(0.0, 0.0),
 	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
-	    //radius: rng.gen::<f64>(),
-	    radius: 1.0,
+	    radius: rng.gen::<f64>(),
+	    //radius: 1.0,
 	    hue: "#aede".to_string(),
-	    collision: false
+	    mass: 1.0,
+        collision: false
 	}
     }
     
@@ -51,10 +52,15 @@ impl Particle {
 	}
     }
 	
+    fn calculate_collision_vel(&mut self, particle: Particle) {
+        self.velocity.x = (self.mass * self.velocity.x + particle.mass * particle.velocity.x) / (self.mass + particle.mass);
+        self.velocity.y = (self.mass * self.velocity.y + particle.mass * particle.velocity.y) / (self.mass + particle.mass);
+    }
+
     fn update_state(&mut self, collision: bool) {
 	const GRAVITY: f64 = 9.8;
 	const FRICTION_COEFF: f64 = 0.025;
-	const RESTITUTION: f64 = 0.45;
+	const RESTITUTION: f64 = 1.0;
 	const TIME_STEP: f64 = 0.016;
 	
 	self.position.x +=  self.velocity.x * TIME_STEP;
@@ -80,13 +86,17 @@ impl Particle {
 	}
 
 	self.hue = if collision == true { "#babe".to_string() } else { "#aede".to_string() };
+    
+    // m1v1 + m2v2 = (m1 + m2) v_final
+    // v_final = (m1v1 + m2v2) / (m1 +m2)
+    //
+
     }
 
     fn check_collision(&mut self, particles: &[Particle]) -> bool {
 	let mut collision = false;
 	for particle in particles.iter() {
 	    if self == particle {
-		log::debug!("self");
 		continue;
 	   }
 	   let dx = 1000.0 * (self.position.x - particle.position.x);
@@ -95,9 +105,10 @@ impl Particle {
 	   if dist <= 25.0 * ( self.radius + particle.radius)
 	   {
 	       collision = true;
+           self.calculate_collision_vel(particle.clone());
 	       break;
 	   }
-	}
+    }
 	return collision;
     }
 }
@@ -105,8 +116,8 @@ impl Particle {
 
 #[function_component]
 fn App() -> Html {
-    const NO_OF_PARTICLES: i32 = 30;
-    const INTERVAL: u32 = 200;
+    const NO_OF_PARTICLES: i32 = 10;
+    const INTERVAL: u32 = 16;
     let particles = use_state(|| Particle::generate_particles(NO_OF_PARTICLES)); //state of particles is of interest
     let onclick = {
 	let particles = particles.clone();
