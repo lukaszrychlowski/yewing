@@ -34,7 +34,7 @@ impl Particle {
 	    radius: rng.gen::<f64>(),
 	    //radius: 1.0,
 	    hue: "#aede".to_string(),
-	    mass: 1.0,
+	    mass: rng.gen::<f64>() * 0.00000001,
         collision: false
 	}
     }
@@ -52,15 +52,17 @@ impl Particle {
 	}
     }
 	
-    fn calculate_collision_vel(&mut self, particle: Particle) {
-        self.velocity.x = (self.mass * self.velocity.x + particle.mass * particle.velocity.x) / (self.mass + particle.mass);
-        self.velocity.y = (self.mass * self.velocity.y + particle.mass * particle.velocity.y) / (self.mass + particle.mass);
+    fn calculate_collision_vel(&self, particle: &Particle) -> Vector2D {
+        let mut collision_vec = Vector2D::new(0.0, 0.0);
+        collision_vec.x =  (self.mass * self.velocity.x + particle.mass * particle.velocity.x) / (self.mass + particle.mass);
+        collision_vec.y = (self.mass * self.velocity.y + particle.mass * particle.velocity.y) / (self.mass + particle.mass);
+        return collision_vec;
     }
 
-    fn update_state(&mut self, collision: bool) {
+    fn update_state(&mut self, collision: bool, collision_vec: Vector2D) {
 	const GRAVITY: f64 = 9.8;
 	const FRICTION_COEFF: f64 = 0.025;
-	const RESTITUTION: f64 = 1.0;
+	const RESTITUTION: f64 = 0.550;
 	const TIME_STEP: f64 = 0.016;
 	
 	self.position.x +=  self.velocity.x * TIME_STEP;
@@ -85,31 +87,35 @@ impl Particle {
 	    self.velocity.x = 0.0;
 	}
 
-	self.hue = if collision == true { "#babe".to_string() } else { "#aede".to_string() };
+    if collision == true {
+        self.hue = "babe".to_string();
+        self.velocity.x = collision_vec.x;
+        self.velocity.y = collision_vec.y;
+    }
     
-    // m1v1 + m2v2 = (m1 + m2) v_final
-    // v_final = (m1v1 + m2v2) / (m1 +m2)
-    //
-
+    else {
+        self.hue = "#aede".to_string(); 
+    }
     }
 
-    fn check_collision(&mut self, particles: &[Particle]) -> bool {
-	let mut collision = false;
-	for particle in particles.iter() {
-	    if self == particle {
-		continue;
-	   }
-	   let dx = 1000.0 * (self.position.x - particle.position.x);
-	   let dy = 1000.0 * (self.position.y - particle.position.y);
-	   let dist = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
-	   if dist <= 25.0 * ( self.radius + particle.radius)
-	   {
+    fn check_collision(&mut self, particles: &[Particle]) -> (bool, Vector2D) {
+	    let mut collision = false;
+	    let mut collision_vec = Vector2D::new(0.0, 0.0);
+        for particle in particles.iter() {
+	        if self == particle {
+		        continue;
+	        }
+	    let dx = 1000.0 * (self.position.x - particle.position.x);
+	    let dy = 1000.0 * (self.position.y - particle.position.y);
+	    let dist = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
+	    if dist <= 25.0 * ( self.radius + particle.radius)
+	    {
 	       collision = true;
-           self.calculate_collision_vel(particle.clone());
+           collision_vec = self.calculate_collision_vel(particle);
 	       break;
 	   }
     }
-	return collision;
+        return (collision, collision_vec);
     }
 }
 	    
@@ -135,8 +141,8 @@ fn App() -> Html {
 		    let particles_snap = (*particles).clone();
 		    for particle in &mut updated_particles {
 			//particle.update_state();
-			let collision = particle.check_collision(&particles_snap);
-			particle.update_state(collision);
+			let (collision, collision_vec) = particle.check_collision(&particles_snap);
+			particle.update_state(collision, collision_vec);
 		    }
 		    updated_particles
 		});
