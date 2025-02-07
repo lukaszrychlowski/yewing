@@ -13,6 +13,7 @@ impl Vector2D {
 	Self { x, y }
     }
 }
+
 #[derive(Clone, PartialEq)]
 struct Particle {
    position: Vector2D, // [m]
@@ -31,71 +32,68 @@ impl Particle {
 	    position: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()),
 	    acceleration: Vector2D::new(0.0, 0.0),
 	    velocity: Vector2D::new(rng.gen::<f64>(), rng.gen::<f64>()), //0 - 1
-	    radius: rng.gen::<f64>(),
-	    //radius: 1.0,
+	    //radius: rng.gen::<f64>(),
+	    radius: 0.1,
 	    hue: "#aede".to_string(),
-	    mass: rng.gen::<f64>() * 0.00000001,
+	    mass: 1.0,
         collision: false
 	}
     }
     
     fn generate_particles(no_of_particles: i32) -> Vec<Particle> {
-	(0..no_of_particles).map(|_| Particle::new()).collect()
+	    (0..no_of_particles).map(|_| Particle::new()).collect()
     }
 	
     fn draw(&self, color: String) -> Html {
-	let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
-	let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
-	let radius = format!("{}", self.radius * 25.0);
-	html! {
-	    <circle cx={x} cy={y} r={radius} fill={color} stroke="black"/>
-	}
-    }
-	
-    fn calculate_collision_vel(&self, particle: &Particle) -> Vector2D {
-        let mut collision_vec = Vector2D::new(0.0, 0.0);
-        collision_vec.x =  (self.mass * self.velocity.x + particle.mass * particle.velocity.x) / (self.mass + particle.mass);
-        collision_vec.y = (self.mass * self.velocity.y + particle.mass * particle.velocity.y) / (self.mass + particle.mass);
-        return collision_vec;
+	    let x = format!("{}", self.position.x * 1000.0); // * innerWidth()
+	    let y = format!("{}", self.position.y * 1000.0); // * innerHeight()
+	    let radius = format!("{}", self.radius * 25.0);
+	    html! {
+	        <circle cx={x} cy={y} r={radius} fill={color} stroke="black"/>
+	    }
     }
 
     fn update_state(&mut self, collision: bool, collision_vec: Vector2D) {
-	const GRAVITY: f64 = 9.8;
-	const FRICTION_COEFF: f64 = 0.025;
-	const RESTITUTION: f64 = 0.550;
-	const TIME_STEP: f64 = 0.016;
-	
-	self.position.x +=  self.velocity.x * TIME_STEP;
-	self.position.y +=  self.velocity.y * TIME_STEP;
-
-	self.velocity.x += self.acceleration.x * TIME_STEP;
-	self.velocity.y += self.acceleration.y + GRAVITY * TIME_STEP;
-
-	self.velocity.x *= 1.0 - FRICTION_COEFF;
-	self.velocity.y *= 1.0 - FRICTION_COEFF;
-	
-	if self.position.x <= 0.0 || self.position.x >= 1.0 {
-	    self.velocity.x = -RESTITUTION * self.velocity.x;
-	}
-	if self.position.y >= 1.0 {
-	    self.velocity.y = -RESTITUTION * self.velocity.y
-	}
-	if self.velocity.y.abs() < 0.1 {
-	    self.velocity.y = 0.0;
-	}
-	if self.velocity.x.abs() < 0.01 {
-	    self.velocity.x = 0.0;
-	}
-
-    if collision == true {
-        self.hue = "babe".to_string();
-        self.velocity.x = collision_vec.x;
-        self.velocity.y = collision_vec.y;
-    }
+	    const GRAVITY: f64 = 9.8;
+	    //const GRAVITY: f64 = 0.0;
+        const FRICTION_COEFF: f64 = 0.025;
+	    //const FRICTION_COEFF: f64 = 0.0;
+        const RESTITUTION: f64 = 0.550;
+	    //const RESTITUTION: f64 = 1.0;
+        const TIME_STEP: f64 = 0.016;	
+	    
+        if collision == true {
+            self.hue = "babe".to_string();
+            self.velocity.x = collision_vec.x;
+            self.velocity.y = collision_vec.y;
+        }
     
-    else {
-        self.hue = "#aede".to_string(); 
-    }
+        else {
+            self.hue = "#aede".to_string(); 
+        }
+        
+        self.position.x +=  self.velocity.x * TIME_STEP;
+	    self.position.y +=  self.velocity.y * TIME_STEP;
+
+	    self.velocity.x += self.acceleration.x * TIME_STEP;
+	    self.velocity.y += self.acceleration.y + GRAVITY * TIME_STEP;
+
+	    self.velocity.x *= 1.0 - FRICTION_COEFF;
+	    self.velocity.y *= 1.0 - FRICTION_COEFF;
+	
+	    if self.position.x <= 0.0 || self.position.x >= 1.0 {
+	        self.velocity.x = -RESTITUTION * self.velocity.x;
+	    }
+	    if self.position.y >= 1.0 || self.position.y <= 0.0 {
+	        self.velocity.y = -RESTITUTION * self.velocity.y
+	    }
+	    if self.velocity.y.abs() < 0.15 {
+	        self.velocity.y = 0.0;
+	    }
+	    if self.velocity.x.abs() < 0.01 {
+	        self.velocity.x = 0.0;
+	    }
+
     }
 
     fn check_collision(&mut self, particles: &[Particle]) -> (bool, Vector2D) {
@@ -105,24 +103,31 @@ impl Particle {
 	        if self == particle {
 		        continue;
 	        }
-	    let dx = 1000.0 * (self.position.x - particle.position.x);
-	    let dy = 1000.0 * (self.position.y - particle.position.y);
-	    let dist = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
-	    if dist <= 25.0 * ( self.radius + particle.radius)
-	    {
-	       collision = true;
-           collision_vec = self.calculate_collision_vel(particle);
-	       break;
-	   }
-    }
+	        let dx = 1000.0 * (self.position.x - particle.position.x);
+	        let dy = 1000.0 * (self.position.y - particle.position.y);
+	        let dist = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
+	        if dist <= 25.0 * ( self.radius + particle.radius)
+	        {
+	            collision = true;
+                collision_vec = self.calculate_collision_vel(particle);
+	            break;
+	        }
+        }
         return (collision, collision_vec);
+    }
+
+    fn calculate_collision_vel(&self, particle: &Particle) -> Vector2D {
+        let mut collision_vec = Vector2D::new(0.0, 0.0);
+        collision_vec.x =  (self.mass * self.velocity.x + particle.mass * particle.velocity.x) / (self.mass + particle.mass);
+        collision_vec.y = (self.mass * self.velocity.y + particle.mass * particle.velocity.y) / (self.mass + particle.mass);
+        return collision_vec;
     }
 }
 	    
 
 #[function_component]
 fn App() -> Html {
-    const NO_OF_PARTICLES: i32 = 10;
+    const NO_OF_PARTICLES: i32 = 1000;
     const INTERVAL: u32 = 16;
     let particles = use_state(|| Particle::generate_particles(NO_OF_PARTICLES)); //state of particles is of interest
     let onclick = {
@@ -156,8 +161,8 @@ fn App() -> Html {
 	    <div>
 	    <button {onclick}>{ "reset" }</button>
 	    </div>
-	<svg width="1000" height="1000" viewbox="0 0 100 100" >
-	    <rect width="1000" height="1000" fill="none" stroke="black" stroke-width="10"/>
+	<svg width="1000" height="1005" viewbox="0 0 100 100" >
+	    <rect width="1000" height="1005" fill="none" stroke="black" stroke-width="1"/>
 	    <text x="20" y=" 30" class="small"> { particles[0].position.x } </text>
 	    <text x="20" y=" 45" class="small"> { particles[0].position.y } </text>
 	    <text x="20" y=" 60" class="small"> { particles[0].velocity.x } </text>
